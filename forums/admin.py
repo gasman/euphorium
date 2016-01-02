@@ -1,3 +1,6 @@
 from django.contrib import admin
 
-# Register your models here.
+from forums.models import Site
+
+
+admin.site.register(Site)
