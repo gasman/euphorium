@@ -33,6 +33,7 @@ class Category(object):
     def __init__(self, soup):
         name_cell = soup.find('td', class_='CategoryName')
         self.url = name_cell.h3.a['href']
+        self.identifier = self.url.split('/')[-1]
         self.name = name_cell.h3.text
         description_elem = name_cell.find(class_='CategoryDescription')
         self.description = description_elem.text.strip()
