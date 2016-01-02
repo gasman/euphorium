@@ -99,8 +99,3 @@ class HomePage(object):
     def fetch(self, url):
         r = requests.get(url)
         return BeautifulSoup(r.text, 'html.parser')
-
-
-def scrape(site):
-    home_page = HomePage(site.origin_url)
-    return home_page
