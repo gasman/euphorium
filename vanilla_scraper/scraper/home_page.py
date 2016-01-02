@@ -32,6 +32,8 @@ class Category(object):
         name_cell = soup.find('td', class_='CategoryName')
         self.url = name_cell.h3.a['href']
         self.name = name_cell.h3.text
+        description_elem = name_cell.find(class_='CategoryDescription')
+        self.description = description_elem.text.strip()
 
         discussion_count_cell = soup.find('td', class_='CountDiscussions')
         discussion_count_text = discussion_count_cell.span['title'].split()[0]
