@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     # 'django.contrib.admindocs',
 
     'forums',
+    'vanilla_scraper',
 ]
 
 MIDDLEWARE_CLASSES = [
