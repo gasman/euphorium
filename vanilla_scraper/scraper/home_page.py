@@ -1,3 +1,5 @@
+import re
+
 import requests
 from bs4 import BeautifulSoup
 import dateutil.parser
@@ -55,7 +57,7 @@ class Category(object):
 
 class CategoryGroup(object):
     def __init__(self, soup):
-        self.id = soup['id']
+        self.identifier = re.sub(r'^CategoryGroup-', '', soup['id'])
         self.name = soup.h2.text
         self.categories = [
             Category(item)
