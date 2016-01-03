@@ -1,10 +1,12 @@
-from forums.models import ForumGroup, Forum
+from forums.models import ForumGroup, Forum, Topic
 
 from .home_page import HomePage
+from .recent_discussions import RecentDiscussionsPage
 
 
 def scrape(site):
     home_page = HomePage(site.origin_url)
+    forums_by_identifier = {}
 
     for category_group in home_page.category_groups:
         forum_group, created = ForumGroup.objects.get_or_create(
@@ -41,5 +43,16 @@ def scrape(site):
                     changed_fields.append('description')
                     forum.description = category.description
 
-            if changed_fields:
-                forum.save(update_fields=changed_fields)
+                if changed_fields:
+                    forum.save(update_fields=changed_fields)
+
+            forums_by_identifier[category.identifier] = forum
+
+    recent_discussions = RecentDiscussionsPage(site.origin_url)
+
+    for discussion in recent_discussions.discussions:
+        topic, created = Topic.objects.get_or_create(
+            forum=forums_by_identifier[discussion.category_identifier],
+            source_reference=discussion.id,
+            defaults={'title': discussion.title}
+        )

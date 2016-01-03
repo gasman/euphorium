@@ -33,6 +33,10 @@ class Discussion(object):
         self.title = title_link.text
         self.url = title_link['href']
 
+        url_parts = self.url.split('/')
+        self.id = int(url_parts[-2])
+        self.slug = url_parts[-1]
+
         pager = title_cell.find(class_='MiniPager')
         if pager:
             self.page_count = int(pager.find_all('a')[-1].text)
@@ -42,6 +46,7 @@ class Discussion(object):
         category_link = title_cell.select_one('.Category > a')
         self.category_name = category_link.text
         self.category_url = category_link['href']
+        self.category_identifier = self.category_url.split('/')[-1]
 
         topic_starter_cell = soup.find('td', class_='FirstUser')
         self.topic_starter = DiscussionParticipant(topic_starter_cell)

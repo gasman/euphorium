@@ -40,3 +40,17 @@ class Forum(models.Model):
         unique_together = [
             ('site', 'source_reference'),
         ]
+
+
+class Topic(models.Model):
+    forum = models.ForeignKey(Forum, related_name='topics')
+    source_reference = models.CharField(max_length=255, db_index=True)
+    title = models.TextField(blank=True)
+
+    def __str__(self):
+        return self.title
+
+    class Meta:
+        unique_together = [
+            ('forum', 'source_reference'),
+        ]
