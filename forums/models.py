@@ -54,3 +54,30 @@ class Topic(models.Model):
         unique_together = [
             ('forum', 'source_reference'),
         ]
+
+
+class User(models.Model):
+    site = models.ForeignKey(Site, related_name='users')
+    source_reference = models.CharField(max_length=255, db_index=True)
+    username = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.username
+
+    class Meta:
+        unique_together = [
+            ('site', 'source_reference'),
+        ]
+
+
+class Post(models.Model):
+    topic = models.ForeignKey(Topic, related_name='posts')
+    source_reference = models.CharField(max_length=255, db_index=True)
+    author = models.ForeignKey(User, related_name='posts')
+    created_at = models.DateTimeField(null=True, blank=True)
+    body = models.TextField(blank=True)
+
+    class Meta:
+        unique_together = [
+            ('topic', 'source_reference'),
+        ]
