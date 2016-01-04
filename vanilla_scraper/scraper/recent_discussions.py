@@ -91,4 +91,4 @@ class RecentDiscussionsPage(object):
 
     def fetch(self, url):
         r = requests.get(url)
-        return BeautifulSoup(r.text, 'html.parser')
+        return BeautifulSoup(r.text, 'html5lib')
