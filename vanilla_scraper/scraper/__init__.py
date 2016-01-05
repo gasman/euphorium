@@ -93,7 +93,7 @@ def scrape(site, verbose=True):
                 topic=topic, source_reference=source_post.id,
                 defaults={
                     'author': user, 'created_at': source_post.datetime,
-                    'body': source_post.message.text
+                    'body': source_post.body
                 }
             )
 
