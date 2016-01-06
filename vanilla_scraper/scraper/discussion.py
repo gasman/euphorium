@@ -36,7 +36,7 @@ def test_emoticon(node, output_document):
 def test_plain_tag(node, output_document):
     # a plain tag with no attributes which should be preserved, and its
     # contents converted recursively
-    if isinstance(node, Tag) and node.name in ('i', 'b', 'u', 'p', 'div') and not node.attrs:
+    if isinstance(node, Tag) and node.name in ('i', 'b', 'u', 'strike', 'p', 'div') and not node.attrs:
         tag = output_document.new_tag(node.name)
         convert_message(node, output_document, tag)
         return tag
