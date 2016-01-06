@@ -109,6 +109,24 @@ def test_bbcode_hr(node, output_document):
         return output_document.new_tag('hr')
 
 
+def test_bbcode_ul(node, output_document):
+    if isinstance(node, Tag) and node.name == 'ul' and 'class' in node.attrs and 'bbcode_list' in node['class']:
+        ul = output_document.new_tag('ul')
+        for child_node in node.children:
+            if isinstance(child_node, Tag) and child_node.name == 'li' and not child_node.attrs:
+                li = output_document.new_tag('li')
+                ul.append(li)
+                convert_message(child_node, output_document, li)
+            elif isinstance(child_node, NavigableString) and not child_node.strip():
+                # ignore whitespace between <li> tags
+                pass
+            else:
+                # invalid child node
+                return
+
+        return ul
+
+
 def test_video_wrap(node, output_document):
     if isinstance(node, Tag) and node.name == 'span' and 'class' in node.attrs and 'VideoWrap' in node['class']:
         tag = output_document.new_tag('video')
@@ -189,6 +207,7 @@ NODE_TESTS = [
     test_link,
     test_bbcode_center,
     test_bbcode_hr,
+    test_bbcode_ul,
     test_video_wrap,
     test_video_iframe,
     test_img,
