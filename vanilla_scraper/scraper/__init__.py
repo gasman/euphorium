@@ -7,7 +7,21 @@ from .recent_discussions import RecentDiscussionsPage
 from .discussion import DiscussionPage
 
 
-def scrape(site, min_date=None, verbose=True):
+def has_seen_post(site, topic, user_id, post_datetime):
+    # return whether we've already seen a post from the given user
+    # at the given time in the given topic
+    try:
+        user = site.users.get(source_reference=user_id)
+    except User.DoesNotExist:
+        # user is unknown, so we can't have seen this post before
+        return False
+
+    return bool(topic.posts.filter(
+        author=user, created_at=post_datetime
+    ))
+
+
+def scrape(site, min_date=None, get_updates=False, verbose=True):
     home_page = HomePage(site.origin_url)
     forums_by_identifier = {}
 
@@ -67,26 +81,40 @@ def scrape(site, min_date=None, verbose=True):
         )
 
         for discussion in recent_discussions.discussions:
+
+            last_poster = discussion.last_poster
+            if (min_date is not None and last_poster.datetime < min_date):
+                # discussion is older than min_date
+                if discussion.is_sticky:
+                    # move to next discussion
+                    continue
+                else:
+                    # all subsequent discussions are older than min_date
+                    has_reached_min_date = True
+                    break
+
             # find / create Topic
             topic, created = Topic.objects.get_or_create(
                 forum=forums_by_identifier[discussion.category_identifier],
                 source_reference=discussion.id,
                 defaults={'title': discussion.title}
             )
-            if min_date is None or discussion.last_poster.datetime >= min_date:
-                # last post of discussion is within our requested date range -
-                # fetch the discussion
-                discussions_to_fetch.append(
-                    (topic, discussion.slug, discussion.page_count)
-                )
 
             if (
-                min_date is not None
-                and discussion.last_poster.datetime < min_date
-                and not discussion.is_sticky
+                get_updates and not created
+                and has_seen_post(site, topic, last_poster.user_id, last_poster.datetime)
             ):
-                # we have reached a discussion older than min_date; stop scanning
-                has_reached_min_date = True
+                if discussion.is_sticky:
+                    continue
+                else:
+                    has_reached_min_date = True
+                    break
+
+            # last post of discussion is within range and not already seen -
+            # fetch the discussion
+            discussions_to_fetch.append(
+                (topic, discussion.slug, discussion.page_count)
+            )
 
         if page_num >= recent_discussions.max_page_number:
             # we have reached the end of the listing
@@ -117,6 +145,9 @@ def scrape(site, min_date=None, verbose=True):
 
             for post in reversed(discussion_page.posts):
                 if min_date is not None and post.datetime < min_date:
+                    has_reached_min_date = True
+                    break
+                elif get_updates and has_seen_post(site, topic, post.author_id, post.datetime):
                     has_reached_min_date = True
                     break
                 else:

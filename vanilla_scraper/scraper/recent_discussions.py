@@ -10,6 +10,7 @@ class DiscussionParticipant(object):
         user_link = soup.find('a', class_='UserLink')
         self.username = user_link.text
         self.user_url = user_link['href']
+        self.user_id = user_link['href'].split('/')[-2]
 
         self.avatar_url = soup.find('img', class_='ProfilePhoto')['src']
 
