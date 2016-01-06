@@ -7,7 +7,7 @@ from .recent_discussions import RecentDiscussionsPage
 from .discussion import DiscussionPage
 
 
-def scrape(site, verbose=True):
+def scrape(site, min_date=None, verbose=True):
     home_page = HomePage(site.origin_url)
     forums_by_identifier = {}
 
@@ -55,30 +55,79 @@ def scrape(site, verbose=True):
 
     discussions_to_fetch = []
 
-    recent_discussions = RecentDiscussionsPage(site.origin_url)
+    page_num = 1
+    has_reached_min_date = False
 
-    for discussion in recent_discussions.discussions:
-        # find / create Topic
-        topic, created = Topic.objects.get_or_create(
-            forum=forums_by_identifier[discussion.category_identifier],
-            source_reference=discussion.id,
-            defaults={'title': discussion.title}
-        )
-        discussions_to_fetch.append(
-            (topic, discussion.slug, discussion.page_count)
-        )
-
-    time.sleep(5)
-
-    for topic, slug, page_count in discussions_to_fetch:
+    while not has_reached_min_date:
         if verbose:
-            print("Fetching topic: %s" % topic.title)
+            print("Scanning recent discussions, page %d" % page_num)
 
-        discussion_page = DiscussionPage(
-            site.origin_url, topic.source_reference, slug
+        recent_discussions = RecentDiscussionsPage(
+            site.origin_url, page_number=page_num
         )
 
-        for source_post in discussion_page.posts:
+        for discussion in recent_discussions.discussions:
+            # find / create Topic
+            topic, created = Topic.objects.get_or_create(
+                forum=forums_by_identifier[discussion.category_identifier],
+                source_reference=discussion.id,
+                defaults={'title': discussion.title}
+            )
+            if min_date is None or discussion.last_poster.datetime >= min_date:
+                # last post of discussion is within our requested date range -
+                # fetch the discussion
+                discussions_to_fetch.append(
+                    (topic, discussion.slug, discussion.page_count)
+                )
+
+            if (
+                min_date is not None
+                and discussion.last_poster.datetime < min_date
+                and not discussion.is_sticky
+            ):
+                # we have reached a discussion older than min_date; stop scanning
+                has_reached_min_date = True
+
+        if page_num >= recent_discussions.max_page_number:
+            # we have reached the end of the listing
+            has_reached_min_date = True
+
+        time.sleep(5)
+        page_num += 1
+
+    # fetch discussions in reverse order, so that if an error occurs we will
+    # have scanned all the discussions older than that one, and can resume by
+    # re-running the task
+    for topic, slug, page_count in reversed(discussions_to_fetch):
+        has_reached_min_date = False
+
+        posts_to_add = []
+
+        for page_num in range(page_count, 0, -1):
+            if verbose:
+                print(
+                    "Fetching topic: %s, page %d of %d" % (
+                        topic.title, page_num, page_count
+                    )
+                )
+
+            discussion_page = DiscussionPage(
+                site.origin_url, topic.source_reference, slug, page_number=page_num
+            )
+
+            for post in reversed(discussion_page.posts):
+                if min_date is not None and post.datetime < min_date:
+                    has_reached_min_date = True
+                    break
+                else:
+                    posts_to_add.append(post)
+
+            time.sleep(5)
+
+            if has_reached_min_date:
+                break
+
+        for source_post in reversed(posts_to_add):
             # find / create User
             user, created = User.objects.get_or_create(
                 site=site, source_reference=source_post.author_id,
@@ -96,5 +145,3 @@ def scrape(site, verbose=True):
                     'body': source_post.body
                 }
             )
-
-        time.sleep(5)
